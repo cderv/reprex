@@ -75,8 +75,7 @@ reprex_render_impl <- function(input,
   yaml_opts <- reprex_document_options(input)
   venue <- yaml_opts[["venue"]] %||% "gh"
   html_preview <-
-    (html_preview %||% yaml_opts[["html_preview"]] %||% is_interactive()) &&
-    is_interactive()
+    (html_preview %||% yaml_opts[["html_preview"]] %||% is_interactive())
   stopifnot(is_bool(html_preview))
   std_out_err <- new_session && (yaml_opts[["std_out_err"]] %||% FALSE)
   if (tolower(path_ext(input)) == "rmd") {
@@ -194,10 +193,19 @@ preview <- function(input) {
     clean = FALSE, quiet = TRUE, encoding = "UTF-8",
     output_options = list(pandoc_args = "--quiet")
   )
-
-  viewer <- getOption("viewer") %||% utils::browseURL
-  viewer(preview_file)
-
+  preview_dir <- Sys.getenv("RMARKDOWN_PREVIEW_DIR",
+                            unset = NA)
+  if (!is.na(preview_dir)) {
+    relocated_preview_file <- tempfile("preview-",
+                                       preview_dir, ".html")
+    file.copy(preview_file, relocated_preview_file)
+    file.remove(preview_file)
+    preview_file <- relocated_preview_file
+    rlang::inform(paste0("\nPreview created: ", preview_file))
+  } else {
+    viewer <- getOption("viewer") %||% utils::browseURL
+    viewer(preview_file)
+  }
   invisible(preview_file)
 }
 
